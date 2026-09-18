@@ -3,60 +3,44 @@ import bcrypt from 'bcryptjs';
 import { sql, ensureSchema } from '@/lib/db';
 import { requireAdminSession } from '@/lib/auth';
 
-// PATCH : modifier nom / prenom / actif / reinitialiser le code
-export async function PATCH(request, { params }) {
+export async function GET() {
   const session = await requireAdminSession();
   if (!session) return NextResponse.json({ erreur: 'Acces refuse.' }, { status: 403 });
   await ensureSchema();
-  const { id } = await params;
-  const body = await request.json();
-  const { nom, prenom, actif, nouveauCode } = body;
-
-  if (nom !== undefined) {
-    await sql`UPDATE employees SET nom = ${nom.trim()} WHERE id = ${id};`;
-  }
-  if (prenom !== undefined) {
-    await sql`UPDATE employees SET prenom = ${prenom ? prenom.trim() : null} WHERE id = ${id};`;
-  }
-  if (actif !== undefined) {
-    await sql`UPDATE employees SET actif = ${actif} WHERE id = ${id};`;
-  }
-  if (nouveauCode) {
-    if (String(nouveauCode).trim().length < 4) {
-      return NextResponse.json({ erreur: 'Le code doit faire au moins 4 caracteres.' }, { status: 400 });
-    }
-    const codeHash = await bcrypt.hash(String(nouveauCode).trim(), 10);
-    await sql`UPDATE employees SET code_hash = ${codeHash} WHERE id = ${id};`;
-  }
-  // tauxHoraire : cle presente mais vide/null => on efface (le poste refait
-  // foi) ; cle presente avec un nombre => on impose ce taux au salarie.
-  if (Object.prototype.hasOwnProperty.call(body, 'tauxHoraire')) {
-    const { tauxHoraire } = body;
-    if (tauxHoraire === null || tauxHoraire === '') {
-      await sql`UPDATE employees SET taux_horaire = NULL WHERE id = ${id};`;
-    } else {
-      const valeur = Number(tauxHoraire);
-      if (Number.isNaN(valeur) || valeur <= 0) {
-        return NextResponse.json({ erreur: 'Le taux horaire doit etre un nombre positif.' }, { status: 400 });
-      }
-      await sql`UPDATE employees SET taux_horaire = ${valeur} WHERE id = ${id};`;
-    }
-  }
 
   const { rows } = await sql`
-    SELECT id, nom, prenom, taux_horaire, actif, created_at FROM employees WHERE id = ${id};
+    SELECT id, nom, prenom, taux_horaire, actif, created_at
+    FROM employees
+    ORDER BY nom, prenom;
   `;
-  return NextResponse.json({ employee: rows[0] });
+  return NextResponse.json({ employees: rows });
 }
 
-// DELETE : supprime le salarie ET ses vacations (garder une trace ?
-// preferez plutot desactiver via PATCH { actif: false } pour conserver
-// l'historique dans le recap Excel).
-export async function DELETE(request, { params }) {
+export async function POST(request) {
   const session = await requireAdminSession();
   if (!session) return NextResponse.json({ erreur: 'Acces refuse.' }, { status: 403 });
   await ensureSchema();
-  const { id } = await params;
-  await sql`DELETE FROM employees WHERE id = ${id};`;
-  return NextResponse.json({ ok: true });
+
+  const { nom, prenom, code, taux_horaire } = await request.json();
+  if (!nom || !code) {
+    return NextResponse.json({ erreur: 'Nom et code requis.' }, { status: 400 });
+  }
+  if (String(code).trim().length < 4) {
+    return NextResponse.json({ erreur: 'Le code doit faire au moins 4 caracteres.' }, { status: 400 });
+  }
+  const tauxPersonnel =
+    taux_horaire !== undefined && taux_horaire !== null && taux_horaire !== ''
+      ? Number(taux_horaire)
+      : null;
+  if (tauxPersonnel !== null && (Number.isNaN(tauxPersonnel) || tauxPersonnel <= 0)) {
+    return NextResponse.json({ erreur: 'Le taux horaire doit etre un nombre positif.' }, { status: 400 });
+  }
+
+  const codeHash = await bcrypt.hash(String(code).trim(), 10);
+  const { rows } = await sql`
+    INSERT INTO employees (nom, prenom, code_hash, taux_horaire)
+    VALUES (${nom.trim()}, ${prenom ? prenom.trim() : null}, ${codeHash}, ${tauxPersonnel})
+    RETURNING id, nom, prenom, taux_horaire, actif, created_at;
+  `;
+  return NextResponse.json({ employee: rows[0] });
 }
