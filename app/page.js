@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Brand } from './components/Brand';
+import { Brand, CompassRose } from './components/Brand';
 import { LANGUES, LOCALES, traduire, traduireErreur, pluriel } from './i18n';
 
 function moisCourant() {
@@ -76,6 +76,7 @@ export default function EmployeePage() {
   const [mois, setMois] = useState(moisCourant());
   const [gains, setGains] = useState(null);
   const [vacations, setVacations] = useState([]);
+  const [planning, setPlanning] = useState([]);
   const [options, setOptions] = useState({ sites: [], postes: [] });
 
   // --- formulaire de saisie ---
@@ -115,14 +116,16 @@ export default function EmployeePage() {
   }, [chargerSession]);
 
   const chargerDonnees = useCallback(async (moisCible) => {
-    const [rGains, rVac, rOpt] = await Promise.all([
+    const [rGains, rVac, rOpt, rPlanning] = await Promise.all([
       fetch(`/api/me/earnings?mois=${moisCible}`),
       fetch(`/api/me/shifts?mois=${moisCible}`),
-      fetch('/api/options')
+      fetch('/api/options'),
+      fetch(`/api/me/planning?mois=${moisCible}`)
     ]);
     if (rGains.ok) setGains(await rGains.json());
     if (rVac.ok) setVacations((await rVac.json()).vacations);
     if (rOpt.ok) setOptions(await rOpt.json());
+    if (rPlanning.ok) setPlanning((await rPlanning.json()).planning);
   }, []);
 
   useEffect(() => {
@@ -200,8 +203,18 @@ export default function EmployeePage() {
   }
 
   async function supprimerVacation(id) {
-    const res = await fetch(`/api/me/shifts/${id}`, { method: 'DELETE' });
-    if (res.ok) chargerDonnees(mois);
+    try {
+      const res = await fetch(`/api/me/shifts/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        window.alert(traduireErreur(langue, data.code, data.erreur));
+        return;
+      }
+    } catch {
+      window.alert(traduireErreur(langue, null, null));
+      return;
+    }
+    chargerDonnees(mois);
   }
 
   if (chargement) {
@@ -218,6 +231,9 @@ export default function EmployeePage() {
     return (
       <div className="page">
         <div className="auth-wrap">
+          <div className="compass-rose-wrap">
+            <CompassRose className="compass-rose" />
+          </div>
           <div className="auth-card">
             <div className="auth-brand">
               <Brand subtitle={t('loginSubtitle')} />
@@ -300,6 +316,30 @@ export default function EmployeePage() {
               &rarr;
             </button>
           </div>
+        </div>
+
+        <div className="card">
+          <div className="card-title">{t('planningTitle')(libelleMois(mois, locale))}</div>
+          {planning.length === 0 ? (
+            <div className="empty-state">{t('planningEmptyState')}</div>
+          ) : (
+            <div className="list">
+              {planning.map((p) => (
+                <div className="list-row" key={p.id}>
+                  <div className="list-row-main">
+                    <div className="list-row-title">
+                      {formatDate(p.planning_date, locale)} &middot; {p.site}
+                    </div>
+                    <div className="list-row-sub">
+                      {p.poste && `${p.poste} · `}
+                      {p.heure_debut}&ndash;{p.heure_fin}
+                      {p.note && ` · ${p.note}`}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="card">
@@ -412,12 +452,18 @@ export default function EmployeePage() {
                     <div className="list-row-sub">
                       {v.poste} &middot; {v.heure_debut}&ndash;{v.heure_fin} &middot;{' '}
                       {Number(v.duree_heures).toFixed(2)} h
-                      {v.valide && <span className="pill pill-success" style={{ marginLeft: 8 }}>{t('validated')}</span>}
+                      {v.modifie_par_manager ? (
+                        <span className="pill pill-danger" style={{ marginLeft: 8 }}>
+                          {t('modifiedByManager')}
+                        </span>
+                      ) : (
+                        v.valide && <span className="pill pill-success" style={{ marginLeft: 8 }}>{t('validated')}</span>
+                      )}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div className="list-row-amount">{formatEuros(v.montant, locale)}</div>
-                    {!v.valide && (
+                    {!v.valide && !v.modifie_par_manager && (
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => supprimerVacation(v.id)}
