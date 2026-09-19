@@ -1,37 +1,39 @@
 :root {
-  /* --- Palette Bionic Stratom (reprise des tokens du site) --- */
-  --navy-950: #05081a;
-  --navy-900: #080e28;
-  --navy-800: #0c1738;
-  --navy-700: #122150;
-  --navy-600: #1a2f6e;
-  --blue-600: #2453d9;
-  --blue-500: #2f6fed;
-  --blue-400: #4d8cf5;
-  --indigo-500: #6a5cff;
-  --indigo-400: #8577ff;
-  --platinum: #c9cee0;
-  --platinum-soft: #e4e7f2;
-  --ivory: #f6f7fb;
+  /* --- Palette Bionic Stratom (reprise exacte des couleurs de
+     bionic-security.com : fond quasi noir/anthracite, texte bleu-gris clair,
+     accent bleu, police Archivo) --- */
+  --navy-950: #05070a;
+  --navy-900: #0a0d12;
+  --navy-800: #10151d;
+  --navy-700: #1a212c;
+  --navy-600: #29323f;
+  --blue-600: #4a84c2;
+  --blue-500: #5b98d6;
+  --blue-400: #8dbbea;
+  --indigo-500: #5b98d6;
+  --indigo-400: #8dbbea;
+  --platinum: #c7d0dc;
+  --platinum-soft: #e7ebf1;
+  --ivory: #f4f6f9;
   --white: #ffffff;
-  --text-dark: #0b1230;
-  --text-muted-light: #4b5271;
-  --text-light: #eef1fb;
-  --text-muted-dark: #9aa3c9;
-  --quote-blue: #5bb8ec;
-  --grad-brand: linear-gradient(135deg, #2f6fed 0%, #6a5cff 100%);
-  --grad-hero: radial-gradient(ellipse 90% 70% at 75% 20%, rgba(106, 92, 255, 0.35) 0%, rgba(47, 111, 237, 0.1) 45%, rgba(5, 8, 26, 0) 75%),
-    linear-gradient(180deg, #05081a 0%, #080e28 55%, #0c1738 100%);
+  --text-dark: #10151d;
+  --text-muted-light: #5b6472;
+  --text-light: #c7d0dc;
+  --text-muted-dark: #8695ab;
+  --quote-blue: #8dbbea;
+  --grad-brand: linear-gradient(135deg, #5b98d6 0%, #4a84c2 100%);
+  --grad-hero: radial-gradient(ellipse 90% 70% at 75% 20%, rgba(91, 152, 214, 0.28) 0%, rgba(91, 152, 214, 0.08) 45%, rgba(5, 7, 10, 0) 75%),
+    linear-gradient(180deg, #05070a 0%, #0a0d12 55%, #10151d 100%);
 
   /* --- Tokens applicatifs --- */
   --bg: var(--ivory);
   --surface: var(--white);
   --surface-2: var(--platinum-soft);
-  --surface-hover: #eaeef8;
+  --surface-hover: #eaeef2;
   --border: var(--platinum);
   --text: var(--text-dark);
   --text-muted: var(--text-muted-light);
-  --text-faint: #7b83a6;
+  --text-faint: #6f7889;
   --accent: var(--blue-500);
   --accent-hover: var(--blue-600);
   --accent-contrast: #ffffff;
@@ -43,8 +45,8 @@
   --warning-bg: rgba(201, 138, 44, 0.12);
   --radius: 2px;
   --radius-lg: 3px;
-  --shadow: var(--shadow-lux, 0 30px 80px -20px rgba(6, 12, 40, 0.35));
-  --font-ui: 'Jost', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --shadow: var(--shadow-lux, 0 30px 80px -20px rgba(5, 7, 10, 0.35));
+  --font-ui: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 * {
@@ -160,14 +162,47 @@ button {
 
 .auth-wrap {
   flex: 1;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
   background: var(--grad-hero);
+  overflow: hidden;
+}
+
+/* Rose des vents en filigrane, comme sur bionic-security.com : tres discrete,
+   tournant tres lentement, positionnee juste a cote de la carte de connexion.
+   Le wrapper porte le positionnement (translateY) et le SVG porte la
+   rotation, pour que les deux transforms ne se marchent pas dessus. */
+.compass-rose-wrap {
+  position: absolute;
+  top: 50%;
+  right: -14%;
+  width: min(72vw, 620px);
+  aspect-ratio: 1 / 1;
+  transform: translateY(-50%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.compass-rose {
+  width: 100%;
+  height: 100%;
+  opacity: 0.14;
+  animation: spin 140s linear infinite;
+}
+
+@media (max-width: 640px) {
+  .compass-rose-wrap {
+    width: min(110vw, 520px);
+    right: -30%;
+  }
 }
 
 .auth-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 380px;
   background: rgba(8, 14, 40, 0.55);
