@@ -6,17 +6,17 @@ export const LANGUES = [
   { code: 'et', label: 'ET' },
   { code: 'es', label: 'ES' }
 ];
-
+ 
 export const LOCALES = {
   fr: 'fr-FR',
   en: 'en-GB',
   et: 'et-EE',
   es: 'es-ES'
 };
-
+ 
 const DICTIONNAIRE = {
   fr: {
-    loginSubtitle: 'Service de securite',
+    loginSubtitle: 'Portage salariale',
     lastName: 'Nom de famille',
     code: 'Code personnel',
     login: 'Se connecter',
@@ -63,7 +63,7 @@ const DICTIONNAIRE = {
     }
   },
   en: {
-    loginSubtitle: 'Security services',
+    loginSubtitle: 'Salary portage',
     lastName: 'Last name',
     code: 'Personal code',
     login: 'Log in',
@@ -110,7 +110,7 @@ const DICTIONNAIRE = {
     }
   },
   et: {
-    loginSubtitle: 'Turvateenus',
+    loginSubtitle: 'Portage salarial',
     lastName: 'Perekonnanimi',
     code: 'Isiklik kood',
     login: 'Logi sisse',
@@ -157,7 +157,7 @@ const DICTIONNAIRE = {
     }
   },
   es: {
-    loginSubtitle: 'Servicio de seguridad',
+    loginSubtitle: 'Portage salarial',
     lastName: 'Apellido',
     code: 'Código personal',
     login: 'Iniciar sesión',
@@ -204,21 +204,23 @@ const DICTIONNAIRE = {
     }
   }
 };
-
+ 
 export function traduire(langue, cle) {
   const dict = DICTIONNAIRE[langue] || DICTIONNAIRE.fr;
   const valeur = dict[cle] ?? DICTIONNAIRE.fr[cle];
   return valeur;
 }
-
+ 
 export function traduireErreur(langue, code, messageParDefaut) {
   const dict = DICTIONNAIRE[langue] || DICTIONNAIRE.fr;
   if (code && dict.errors[code]) return dict.errors[code];
   if (code && DICTIONNAIRE.fr.errors[code]) return DICTIONNAIRE.fr.errors[code];
   return messageParDefaut || dict.errors.generic;
 }
-
+ 
 export function pluriel(langue, count, singulier, pluriel_) {
   const dict = DICTIONNAIRE[langue] || DICTIONNAIRE.fr;
   return count > 1 ? dict[pluriel_] : dict[singulier];
 }
+ 
+
