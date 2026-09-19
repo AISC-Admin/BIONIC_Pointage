@@ -16,7 +16,7 @@ export const LOCALES = {
 
 const DICTIONNAIRE = {
   fr: {
-    loginSubtitle: 'Espace pointage salarie',
+    loginSubtitle: 'Service de securite',
     lastName: 'Nom de famille',
     code: 'Code personnel',
     login: 'Se connecter',
@@ -46,7 +46,10 @@ const DICTIONNAIRE = {
     yourVacationsTitle: (mois) => `Vos vacations — ${mois}`,
     emptyState: 'Aucune vacation enregistree ce mois-ci.',
     validated: 'Validee',
+    modifiedByManager: 'Modifie par le Manager',
     deleteTitle: 'Supprimer',
+    planningTitle: (mois) => `Votre planning — ${mois}`,
+    planningEmptyState: 'Aucun planning envoye pour ce mois.',
     errors: {
       missing_fields: 'Nom et code requis.',
       invalid_credentials: 'Nom ou code incorrect.',
@@ -60,7 +63,7 @@ const DICTIONNAIRE = {
     }
   },
   en: {
-    loginSubtitle: 'Employee time-tracking area',
+    loginSubtitle: 'Security services',
     lastName: 'Last name',
     code: 'Personal code',
     login: 'Log in',
@@ -90,7 +93,10 @@ const DICTIONNAIRE = {
     yourVacationsTitle: (mois) => `Your shifts — ${mois}`,
     emptyState: 'No shifts recorded this month.',
     validated: 'Approved',
+    modifiedByManager: 'Modified by the manager',
     deleteTitle: 'Delete',
+    planningTitle: (mois) => `Your schedule — ${mois}`,
+    planningEmptyState: 'No schedule sent for this month.',
     errors: {
       missing_fields: 'Last name and code are required.',
       invalid_credentials: 'Incorrect last name or code.',
@@ -104,7 +110,7 @@ const DICTIONNAIRE = {
     }
   },
   et: {
-    loginSubtitle: 'Töötajate tööaja registreerimine',
+    loginSubtitle: 'Turvateenus',
     lastName: 'Perekonnanimi',
     code: 'Isiklik kood',
     login: 'Logi sisse',
@@ -134,7 +140,10 @@ const DICTIONNAIRE = {
     yourVacationsTitle: (mois) => `Sinu vahetused — ${mois}`,
     emptyState: 'Sel kuul ei ole vahetusi registreeritud.',
     validated: 'Kinnitatud',
+    modifiedByManager: 'Juht muutis',
     deleteTitle: 'Kustuta',
+    planningTitle: (mois) => `Sinu tööplaan — ${mois}`,
+    planningEmptyState: 'Sel kuul ei ole tööplaani saadetud.',
     errors: {
       missing_fields: 'Perekonnanimi ja kood on kohustuslikud.',
       invalid_credentials: 'Vale perekonnanimi või kood.',
@@ -148,7 +157,7 @@ const DICTIONNAIRE = {
     }
   },
   es: {
-    loginSubtitle: 'Área de fichaje del empleado',
+    loginSubtitle: 'Servicio de seguridad',
     lastName: 'Apellido',
     code: 'Código personal',
     login: 'Iniciar sesión',
@@ -178,7 +187,10 @@ const DICTIONNAIRE = {
     yourVacationsTitle: (mois) => `Tus turnos — ${mois}`,
     emptyState: 'No hay turnos registrados este mes.',
     validated: 'Validado',
+    modifiedByManager: 'Modificado por el gerente',
     deleteTitle: 'Eliminar',
+    planningTitle: (mois) => `Tu horario previsto — ${mois}`,
+    planningEmptyState: 'No se ha enviado ningún horario para este mes.',
     errors: {
       missing_fields: 'El apellido y el código son obligatorios.',
       invalid_credentials: 'Apellido o código incorrecto.',
