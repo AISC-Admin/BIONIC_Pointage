@@ -1,32 +1,32 @@
 'use client';
-
+ 
 import { useEffect, useState, useCallback } from 'react';
 import { Brand } from '../components/Brand';
-
+ 
 const MOIS_LABELS = [
   'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'
 ];
-
+ 
 function moisCourant() {
   return new Date().toISOString().slice(0, 7);
 }
-
+ 
 function libelleMois(mois) {
   const [annee, m] = mois.split('-').map(Number);
   return `${MOIS_LABELS[m - 1]} ${annee}`;
 }
-
+ 
 function decalerMois(mois, delta) {
   const [annee, m] = mois.split('-').map(Number);
   const d = new Date(Date.UTC(annee, m - 1 + delta, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
-
+ 
 function formatEuros(valeur) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(valeur || 0);
 }
-
+ 
 const ONGLETS = [
   { id: 'vacations', label: 'Vacations' },
   { id: 'employees', label: 'Salaries' },
@@ -34,17 +34,17 @@ const ONGLETS = [
   { id: 'postes', label: 'Postes' },
   { id: 'rapport', label: 'Rapport' }
 ];
-
+ 
 export default function AdminPage() {
   const [chargement, setChargement] = useState(true);
   const [connecte, setConnecte] = useState(false);
   const [motDePasse, setMotDePasse] = useState('');
   const [erreurConnexion, setErreurConnexion] = useState('');
   const [connexionEnCours, setConnexionEnCours] = useState(false);
-
+ 
   const [onglet, setOnglet] = useState('vacations');
   const [mois, setMois] = useState(moisCourant());
-
+ 
   const [summary, setSummary] = useState(null);
   const [vacations, setVacations] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -52,23 +52,23 @@ export default function AdminPage() {
   const [postes, setPostes] = useState([]);
   const [filtreEmploye, setFiltreEmploye] = useState('');
   const [filtreSite, setFiltreSite] = useState('');
-
+ 
   const verifierSession = useCallback(async () => {
     const res = await fetch(`/api/admin/summary?mois=${moisCourant()}`);
     setConnecte(res.ok);
     if (res.ok) setSummary(await res.json());
     setChargement(false);
   }, []);
-
+ 
   useEffect(() => {
     verifierSession();
   }, [verifierSession]);
-
+ 
   const chargerTout = useCallback(async () => {
     const params = new URLSearchParams({ mois });
     if (filtreEmploye) params.set('employee_id', filtreEmploye);
     if (filtreSite) params.set('site_id', filtreSite);
-
+ 
     const [rSummary, rVac, rEmp, rSites, rPostes] = await Promise.all([
       fetch(`/api/admin/summary?mois=${mois}`),
       fetch(`/api/admin/shifts?${params.toString()}`),
@@ -82,11 +82,11 @@ export default function AdminPage() {
     if (rSites.ok) setSites((await rSites.json()).sites);
     if (rPostes.ok) setPostes((await rPostes.json()).postes);
   }, [mois, filtreEmploye, filtreSite]);
-
+ 
   useEffect(() => {
     if (connecte) chargerTout();
   }, [connecte, chargerTout]);
-
+ 
   async function connexion(e) {
     e.preventDefault();
     setErreurConnexion('');
@@ -107,12 +107,12 @@ export default function AdminPage() {
       setConnexionEnCours(false);
     }
   }
-
+ 
   async function deconnexion() {
     await fetch('/api/auth/logout', { method: 'POST' });
     setConnecte(false);
   }
-
+ 
   async function toggleValide(id, valide) {
     await fetch(`/api/admin/shifts/${id}`, {
       method: 'PATCH',
@@ -121,17 +121,17 @@ export default function AdminPage() {
     });
     chargerTout();
   }
-
+ 
   async function supprimerVacation(id) {
     await fetch(`/api/admin/shifts/${id}`, { method: 'DELETE' });
     chargerTout();
   }
-
+ 
   async function exporterExcel(portee) {
     const url = portee === 'mois' ? `/api/admin/export?mois=${mois}` : '/api/admin/export';
     window.location.href = url;
   }
-
+ 
   // --- Salaries ---
   const [nouvNom, setNouvNom] = useState('');
   const [nouvPrenom, setNouvPrenom] = useState('');
@@ -140,7 +140,10 @@ export default function AdminPage() {
   const [ajoutEnCours, setAjoutEnCours] = useState(false);
   const [codeReset, setCodeReset] = useState({});
   const [tauxEdit, setTauxEdit] = useState({});
-
+  const [nomEdit, setNomEdit] = useState({});
+  const [prenomEdit, setPrenomEdit] = useState({});
+  const [editionOuverte, setEditionOuverte] = useState(null);
+ 
   async function ajouterEmploye(e) {
     e.preventDefault();
     setAjoutEnCours(true);
@@ -166,7 +169,7 @@ export default function AdminPage() {
       setAjoutEnCours(false);
     }
   }
-
+ 
   async function toggleEmployeActif(id, actif) {
     await fetch(`/api/admin/employees/${id}`, {
       method: 'PATCH',
@@ -175,7 +178,7 @@ export default function AdminPage() {
     });
     chargerTout();
   }
-
+ 
   async function reinitialiserCode(id) {
     const nouveauCode = codeReset[id];
     if (!nouveauCode || nouveauCode.length < 4) return;
@@ -187,7 +190,7 @@ export default function AdminPage() {
     setCodeReset((c) => ({ ...c, [id]: '' }));
     chargerTout();
   }
-
+ 
   async function enregistrerTauxPerso(id) {
     const valeurBrute = tauxEdit[id];
     // Champ vide envoye explicitement => efface le taux personnel (le
@@ -201,12 +204,39 @@ export default function AdminPage() {
     setTauxEdit((c) => ({ ...c, [id]: undefined }));
     chargerTout();
   }
-
+ 
+  function ouvrirEditionNom(employe) {
+    setEditionOuverte((courant) => (courant === employe.id ? null : employe.id));
+    setNomEdit((c) => ({ ...c, [employe.id]: employe.nom }));
+    setPrenomEdit((c) => ({ ...c, [employe.id]: employe.prenom || '' }));
+  }
+ 
+  async function enregistrerNomPrenom(id) {
+    const nom = (nomEdit[id] || '').trim();
+    if (!nom) return;
+    await fetch(`/api/admin/employees/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nom, prenom: (prenomEdit[id] || '').trim() || null })
+    });
+    setEditionOuverte(null);
+    chargerTout();
+  }
+ 
+  async function supprimerEmploye(id, libelle) {
+    const confirme = window.confirm(
+      `Supprimer definitivement ${libelle} ?\n\nCela supprime aussi toutes ses vacations enregistrees (irreversible). Pour une simple erreur de saisie, preferez plutot corriger le nom ou desactiver le compte.`
+    );
+    if (!confirme) return;
+    await fetch(`/api/admin/employees/${id}`, { method: 'DELETE' });
+    chargerTout();
+  }
+ 
   // --- Rapport (tableau croise mois x site pour un salarie) ---
   const [rapportEmploye, setRapportEmploye] = useState('');
   const [rapportData, setRapportData] = useState(null);
   const [rapportChargement, setRapportChargement] = useState(false);
-
+ 
   useEffect(() => {
     if (!rapportEmploye) {
       setRapportData(null);
@@ -218,7 +248,7 @@ export default function AdminPage() {
       .then((data) => setRapportData(data))
       .finally(() => setRapportChargement(false));
   }, [rapportEmploye]);
-
+ 
   // --- Sites ---
   const [nouvSite, setNouvSite] = useState('');
   async function ajouterSite(e) {
@@ -245,7 +275,7 @@ export default function AdminPage() {
     await fetch(`/api/admin/sites/${id}`, { method: 'DELETE' });
     chargerTout();
   }
-
+ 
   // --- Postes ---
   const [nouvPoste, setNouvPoste] = useState('');
   const [nouvTaux, setNouvTaux] = useState('');
@@ -274,7 +304,7 @@ export default function AdminPage() {
     await fetch(`/api/admin/postes/${id}`, { method: 'DELETE' });
     chargerTout();
   }
-
+ 
   if (chargement) {
     return (
       <div className="page">
@@ -284,7 +314,7 @@ export default function AdminPage() {
       </div>
     );
   }
-
+ 
   if (!connecte) {
     return (
       <div className="page">
@@ -315,7 +345,7 @@ export default function AdminPage() {
       </div>
     );
   }
-
+ 
   return (
     <div className="page">
       <div className="topbar">
@@ -326,7 +356,7 @@ export default function AdminPage() {
           </button>
         </div>
       </div>
-
+ 
       <div className="shell section-gap">
         <div className="flex-between">
           <div className="tabs" style={{ flex: 1 }}>
@@ -341,7 +371,7 @@ export default function AdminPage() {
             ))}
           </div>
         </div>
-
+ 
         <div className="flex-between">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button className="btn btn-secondary btn-sm" onClick={() => setMois((m) => decalerMois(m, -1))}>
@@ -365,7 +395,7 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
-
+ 
         <div className="stat-grid">
           <div className="stat">
             <div className="stat-label">Heures ({libelleMois(mois)})</div>
@@ -380,7 +410,7 @@ export default function AdminPage() {
             <div className="stat-value">{summary?.parEmploye?.length || 0}</div>
           </div>
         </div>
-
+ 
         {onglet === 'vacations' && (
           <>
             <div className="card">
@@ -408,7 +438,46 @@ export default function AdminPage() {
                 </table>
               </div>
             </div>
-
+ 
+            <div className="card">
+              <div className="card-title">Recap par site</div>
+              {(summary?.parSite || []).length === 0 ? (
+                <div className="empty-state">Aucune vacation enregistree ce mois-ci.</div>
+              ) : (
+                (summary?.parSite || []).map((site) => (
+                  <div key={site.siteId} style={{ marginBottom: 18 }}>
+                    <div className="flex-between" style={{ marginBottom: 8 }}>
+                      <div style={{ fontWeight: 600 }}>{site.nom}</div>
+                      <div style={{ display: 'flex', gap: 16, fontSize: 14 }}>
+                        <span>{site.totalHeures.toFixed(2)} h</span>
+                        <span className="accent">{formatEuros(site.totalMontant)}</span>
+                      </div>
+                    </div>
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Salarie</th>
+                            <th>Heures</th>
+                            <th>Montant</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {site.parEmploye.map((e) => (
+                            <tr key={e.employeeId}>
+                              <td>{e.prenom ? `${e.prenom} ${e.nom}` : e.nom}</td>
+                              <td>{e.totalHeures.toFixed(2)} h</td>
+                              <td>{formatEuros(e.totalMontant)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+ 
             <div className="card">
               <div className="flex-between" style={{ marginBottom: 14 }}>
                 <div className="card-title" style={{ margin: 0 }}>
@@ -433,7 +502,7 @@ export default function AdminPage() {
                   </select>
                 </div>
               </div>
-
+ 
               {vacations.length === 0 ? (
                 <div className="empty-state">Aucune vacation pour ces filtres.</div>
               ) : (
@@ -471,7 +540,7 @@ export default function AdminPage() {
             </div>
           </>
         )}
-
+ 
         {onglet === 'employees' && (
           <div className="card">
             <div className="card-title">Ajouter un salarie</div>
@@ -505,59 +574,95 @@ export default function AdminPage() {
                 Ajouter
               </button>
             </form>
-
+ 
             <div style={{ marginTop: 22 }}>
               <div className="list">
                 {employees.map((e) => (
-                  <div className="list-row" key={e.id}>
-                    <div className="list-row-main">
-                      <div className="list-row-title">{e.prenom ? `${e.prenom} ${e.nom}` : e.nom}</div>
-                      <div className="list-row-sub">
-                        {e.actif ? 'Actif' : 'Inactif'}
-                        {e.taux_horaire != null && (
-                          <span className="pill pill-success" style={{ marginLeft: 8 }}>
-                            {formatEuros(e.taux_horaire)}/h perso
-                          </span>
-                        )}
+                  <div key={e.id}>
+                    <div className="list-row">
+                      <div className="list-row-main">
+                        <div className="list-row-title">{e.prenom ? `${e.prenom} ${e.nom}` : e.nom}</div>
+                        <div className="list-row-sub">
+                          {e.actif ? 'Actif' : 'Inactif'}
+                          {e.taux_horaire != null && (
+                            <span className="pill pill-success" style={{ marginLeft: 8 }}>
+                              {formatEuros(e.taux_horaire)}/h perso
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Taux perso"
+                          style={{ width: 110 }}
+                          value={tauxEdit[e.id] ?? (e.taux_horaire != null ? String(e.taux_horaire) : '')}
+                          onChange={(ev) => setTauxEdit((c) => ({ ...c, [e.id]: ev.target.value }))}
+                        />
+                        <button className="btn btn-secondary btn-sm" onClick={() => enregistrerTauxPerso(e.id)}>
+                          Appliquer le taux
+                        </button>
+                        <input
+                          type="text"
+                          placeholder="Nouveau code"
+                          style={{ width: 130 }}
+                          value={codeReset[e.id] || ''}
+                          onChange={(ev) => setCodeReset((c) => ({ ...c, [e.id]: ev.target.value }))}
+                        />
+                        <button className="btn btn-secondary btn-sm" onClick={() => reinitialiserCode(e.id)}>
+                          Reinitialiser
+                        </button>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => toggleEmployeActif(e.id, !e.actif)}
+                        >
+                          {e.actif ? 'Desactiver' : 'Activer'}
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => ouvrirEditionNom(e)}>
+                          {editionOuverte === e.id ? 'Fermer' : 'Corriger le nom'}
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => supprimerEmploye(e.id, e.prenom ? `${e.prenom} ${e.nom}` : e.nom)}
+                        >
+                          Supprimer
+                        </button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Taux perso"
-                        style={{ width: 110 }}
-                        value={tauxEdit[e.id] ?? (e.taux_horaire != null ? String(e.taux_horaire) : '')}
-                        onChange={(ev) => setTauxEdit((c) => ({ ...c, [e.id]: ev.target.value }))}
-                      />
-                      <button className="btn btn-secondary btn-sm" onClick={() => enregistrerTauxPerso(e.id)}>
-                        Appliquer le taux
-                      </button>
-                      <input
-                        type="text"
-                        placeholder="Nouveau code"
-                        style={{ width: 130 }}
-                        value={codeReset[e.id] || ''}
-                        onChange={(ev) => setCodeReset((c) => ({ ...c, [e.id]: ev.target.value }))}
-                      />
-                      <button className="btn btn-secondary btn-sm" onClick={() => reinitialiserCode(e.id)}>
-                        Reinitialiser
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => toggleEmployeActif(e.id, !e.actif)}
-                      >
-                        {e.actif ? 'Desactiver' : 'Activer'}
-                      </button>
-                    </div>
+                    {editionOuverte === e.id && (
+                      <div className="entry" style={{ marginBottom: 10 }}>
+                        <div className="row">
+                          <div className="field">
+                            <label>Nom</label>
+                            <input
+                              type="text"
+                              value={nomEdit[e.id] ?? ''}
+                              onChange={(ev) => setNomEdit((c) => ({ ...c, [e.id]: ev.target.value }))}
+                            />
+                          </div>
+                          <div className="field">
+                            <label>Prenom</label>
+                            <input
+                              type="text"
+                              value={prenomEdit[e.id] ?? ''}
+                              onChange={(ev) => setPrenomEdit((c) => ({ ...c, [e.id]: ev.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <button className="btn btn-primary btn-sm" onClick={() => enregistrerNomPrenom(e.id)}>
+                          Enregistrer le nom
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           </div>
         )}
-
+ 
         {onglet === 'rapport' && (
           <div className="card">
             <div className="card-title">Rapport par salarie &mdash; heures par mois et par site</div>
@@ -572,19 +677,19 @@ export default function AdminPage() {
                 ))}
               </select>
             </div>
-
+ 
             {!rapportEmploye && <div className="empty-state">Selectionnez un salarie pour voir son historique.</div>}
-
+ 
             {rapportEmploye && rapportChargement && (
               <div className="center-loading">
                 <div className="spinner" />
               </div>
             )}
-
+ 
             {rapportEmploye && !rapportChargement && rapportData && rapportData.rows.length === 0 && (
               <div className="empty-state">Aucune vacation enregistree pour ce salarie.</div>
             )}
-
+ 
             {rapportEmploye && !rapportChargement && rapportData && rapportData.rows.length > 0 && (
               <div className="table-wrap">
                 <table>
@@ -647,7 +752,7 @@ export default function AdminPage() {
             )}
           </div>
         )}
-
+ 
         {onglet === 'sites' && (
           <div className="card">
             <div className="card-title">Ajouter un site</div>
@@ -662,7 +767,7 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
-
+ 
             <div style={{ marginTop: 22 }} className="list">
               {sites.map((s) => (
                 <div className="list-row" key={s.id}>
@@ -683,7 +788,7 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
+ 
         {onglet === 'postes' && (
           <div className="card">
             <div className="card-title">Ajouter un poste</div>
@@ -709,7 +814,7 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
-
+ 
             <div style={{ marginTop: 22 }} className="list">
               {postes.map((p) => (
                 <div className="list-row" key={p.id}>
@@ -739,3 +844,4 @@ export default function AdminPage() {
     </div>
   );
 }
+ 
