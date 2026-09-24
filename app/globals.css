@@ -823,3 +823,16 @@ input[type='checkbox'] {
   margin: 0;
   accent-color: var(--blue-500);
 }
+
+/* L'application est en theme clair : on le declare au navigateur pour que
+   les listes natives (suggestions Poste/Pays, menus deroulants, calendrier)
+   restent en texte sombre sur fond clair, meme si le Mac/PC est en mode
+   sombre (sinon Safari affiche les choix en blanc sur blanc). */
+:root {
+  color-scheme: light;
+}
+
+select option {
+  color: var(--text);
+  background: var(--surface);
+}

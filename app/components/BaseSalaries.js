@@ -15,6 +15,7 @@ function ficheVide() {
     telephone: '',
     email: '',
     ville: '',
+    pays: '',
     poste: '',
     langues: '',
     taux_horaire: '',
@@ -80,6 +81,14 @@ function nomFichierSur(nom) {
 function lienFichier(url) {
   return url ? `/api/admin/base-salaries/fichier?url=${encodeURIComponent(url)}` : '';
 }
+
+// Suggestions pour le champ Pays (saisie libre possible).
+const PAYS = [
+  'France', 'Estonie', 'Espagne', 'Belgique', 'Suisse', 'Luxembourg', 'Monaco', 'Italie',
+  'Allemagne', 'Portugal', 'Royaume-Uni', 'Irlande', 'Pays-Bas', 'Finlande', 'Lettonie',
+  'Lituanie', 'Pologne', 'Roumanie', 'Maroc', 'Algerie', 'Tunisie', 'Senegal',
+  "Cote d'Ivoire", 'Cameroun', 'Canada', 'Etats-Unis'
+];
 
 function libelleDispo(f) {
   if (f.dispo_ete && f.dispo_hiver) return 'Ete + Hiver';
@@ -249,7 +258,7 @@ export default function BaseSalaries({ postes = [] }) {
       if (filtreDispo === 'hiver' && !f.dispo_hiver) return false;
       if (filtreDispo === 'deux' && !(f.dispo_ete && f.dispo_hiver)) return false;
       if (!q) return true;
-      return [f.nom, f.prenom, f.ville, f.poste, f.langues, f.email, f.telephone]
+      return [f.nom, f.prenom, f.ville, f.pays, f.poste, f.langues, f.email, f.telephone]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
@@ -313,6 +322,15 @@ export default function BaseSalaries({ postes = [] }) {
             <div className="field">
               <label>Ville</label>
               <input type="text" value={form.ville} onChange={(e) => maj('ville', e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Pays</label>
+              <input type="text" list="bs-pays" value={form.pays} onChange={(e) => maj('pays', e.target.value)} />
+              <datalist id="bs-pays">
+                {PAYS.map((p) => (
+                  <option key={p} value={p} />
+                ))}
+              </datalist>
             </div>
           </div>
 
@@ -428,7 +446,7 @@ export default function BaseSalaries({ postes = [] }) {
           <div className="field">
             <input
               type="search"
-              placeholder="Rechercher (nom, ville, poste, langue...)"
+              placeholder="Rechercher (nom, ville, pays, poste, langue...)"
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
             />
@@ -472,7 +490,7 @@ export default function BaseSalaries({ postes = [] }) {
                           )}
                         </div>
                         <div className="list-row-sub">
-                          {[f.poste, f.ville, formatEuros(f.taux_horaire) && `${formatEuros(f.taux_horaire)}/h`]
+                          {[f.poste, [f.ville, f.pays].filter(Boolean).join(', '), formatEuros(f.taux_horaire) && `${formatEuros(f.taux_horaire)}/h`]
                             .filter(Boolean)
                             .join(' · ')}
                         </div>

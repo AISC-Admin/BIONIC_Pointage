@@ -30,7 +30,7 @@ export async function PATCH(request, { params }) {
   await sql`
     UPDATE base_salaries SET
       nom = ${f.nom}, prenom = ${f.prenom}, date_naissance = ${f.date_naissance},
-      telephone = ${f.telephone}, email = ${f.email}, ville = ${f.ville}, poste = ${f.poste},
+      telephone = ${f.telephone}, email = ${f.email}, ville = ${f.ville}, pays = ${f.pays}, poste = ${f.poste},
       langues = ${f.langues}, taux_horaire = ${f.taux_horaire}, dispo_ete = ${f.dispo_ete},
       dispo_hiver = ${f.dispo_hiver}, cv_texte = ${f.cv_texte}, cv_url = ${f.cv_url},
       cv_nom = ${f.cv_nom}, photo_url = ${f.photo_url}, updated_at = now()
