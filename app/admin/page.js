@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Brand } from '../components/Brand';
+import BaseSalaries from '../components/BaseSalaries';
 
 const MOIS_LABELS = [
   'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -34,7 +35,8 @@ const ONGLETS = [
   { id: 'postes', label: 'Postes' },
   { id: 'planning', label: 'Planning' },
   { id: 'rapport', label: 'Rapport' },
-  { id: 'anomalies', label: 'Anomalies' }
+  { id: 'anomalies', label: 'Anomalies' },
+  { id: 'base', label: 'Base de donnees salaries' }
 ];
 
 // Libelles et styles des types d'anomalies renvoyees par
@@ -1385,6 +1387,8 @@ export default function AdminPage() {
             </div>
           </>
         )}
+
+        {onglet === 'base' && <BaseSalaries postes={postes} />}
       </div>
     </div>
   );

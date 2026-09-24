@@ -787,3 +787,39 @@ tr:last-child td {
   width: fit-content;
   margin: 0 auto 18px;
 }
+
+/* --- Onglet "Base de donnees salaries" : champs supplementaires --- */
+input[type='email'],
+input[type='tel'],
+input[type='search'],
+textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 11px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+input[type='email']:focus,
+input[type='tel']:focus,
+input[type='search']:focus,
+textarea:focus {
+  border-color: var(--blue-500);
+}
+
+input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--blue-500);
+}
