@@ -574,6 +574,11 @@ select:focus {
   color: var(--danger);
 }
 
+.pill-info {
+  background: #e8f0fb;
+  color: var(--blue-600);
+}
+
 /* --- Alerts --- */
 
 .alert {

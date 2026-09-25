@@ -13,7 +13,8 @@ export async function GET() {
       to_char(date_postulation, 'YYYY-MM-DD') AS date_postulation,
       to_char(date_entretien, 'YYYY-MM-DD') AS date_entretien,
       poste, langues, taux_horaire, dispo_ete, dispo_hiver,
-      cv_texte, cv_url, cv_nom, photo_url, created_at, updated_at
+      cv_texte, cv_url, cv_nom, photo_url, created_at, updated_at,
+      mail_envoye, entretien_passe, valide_recruteur, employee_id
     FROM base_salaries
     ORDER BY lower(nom), lower(coalesce(prenom, ''));
   `;

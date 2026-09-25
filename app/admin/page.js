@@ -1388,7 +1388,7 @@ export default function AdminPage() {
           </>
         )}
 
-        {onglet === 'base' && <BaseSalaries postes={postes} />}
+        {onglet === 'base' && <BaseSalaries postes={postes} onSalarieCree={chargerTout} />}
       </div>
     </div>
   );

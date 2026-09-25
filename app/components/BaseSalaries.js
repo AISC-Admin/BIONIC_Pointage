@@ -122,7 +122,34 @@ function libelleDispo(f) {
   return null;
 }
 
+// Couleur de fond d'une ligne du tableau pre-entretien selon l'avancement :
+// l'etape la plus avancee l'emporte (valide > entretien passe > mail envoye).
+const FOND_SUIVI = {
+  valide_recruteur: '#e9f7ec', // vert clair tres pale
+  entretien_passe: '#e8f4fc', // bleu ciel tres pale
+  mail_envoye: '#fff3e6' // orange tres pale
+};
+
+function fondLigne(f) {
+  if (f.valide_recruteur) return FOND_SUIVI.valide_recruteur;
+  if (f.entretien_passe) return FOND_SUIVI.entretien_passe;
+  if (f.mail_envoye) return FOND_SUIVI.mail_envoye;
+  return undefined;
+}
+
+const CASES_SUIVI = [
+  { champ: 'mail_envoye', libelle: 'Mail envoye' },
+  { champ: 'entretien_passe', libelle: 'Entretien passe' },
+  { champ: 'valide_recruteur', libelle: 'Valide par recruteur' }
+];
+
+// Code personnel suggere (4 chiffres) pour un nouveau compte de pointage.
+function codeAleatoire() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
 const styles = {
+  caseSuivi: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, cursor: 'pointer', whiteSpace: 'nowrap', margin: 0, textTransform: 'none', letterSpacing: 0, fontWeight: 500, color: 'var(--text)' },
   avatar: {
     width: 48,
     height: 48,
@@ -164,7 +191,7 @@ const styles = {
   check: { display: 'flex', alignItems: 'center', gap: 8, textTransform: 'none', fontSize: 14, cursor: 'pointer', color: 'var(--text)', letterSpacing: 0, fontWeight: 500 }
 };
 
-export default function BaseSalaries({ postes = [] }) {
+export default function BaseSalaries({ postes = [], onSalarieCree }) {
   const [fiches, setFiches] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [form, setForm] = useState(ficheVide());
@@ -306,6 +333,50 @@ export default function BaseSalaries({ postes = [] }) {
     await charger();
     modifier(fiche);
     setMessage({ type: 'success', texte: `${f.prenom || ''} ${f.nom} est maintenant dans la base : completez sa fiche si besoin.` });
+  }
+
+  // Coche / decoche une case de suivi : mise a jour immediate de l'affichage,
+  // puis enregistrement en base (retour en arriere si l'appel echoue).
+  async function basculerSuivi(f, champ, valeur) {
+    setFiches((liste) => liste.map((x) => (x.id === f.id ? { ...x, [champ]: valeur } : x)));
+    const res = await fetch(`/api/admin/base-salaries/${f.id}/suivi`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ champ, valeur })
+    });
+    if (!res.ok) {
+      setFiches((liste) => liste.map((x) => (x.id === f.id ? { ...x, [champ]: !valeur } : x)));
+      const data = await res.json().catch(() => ({}));
+      setMessage({ type: 'error', texte: data.erreur || 'Mise a jour impossible.' });
+    }
+  }
+
+  // Dossier valide : cree le compte de pointage du salarie (nom + code
+  // personnel) a partir de sa fiche de la base.
+  async function ajouterCommeSalarie(f) {
+    const code = window.prompt(
+      `Creer le compte salarie de ${f.prenom || ''} ${f.nom}.\n\nCode personnel de connexion (4 caracteres minimum) :`,
+      codeAleatoire()
+    );
+    if (code === null) return;
+    const res = await fetch(`/api/admin/base-salaries/${f.id}/salarie`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage({ type: 'error', texte: data.erreur || 'Creation du compte impossible.' });
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    await charger();
+    onSalarieCree?.();
+    setMessage({
+      type: 'success',
+      texte: `${f.prenom || ''} ${f.nom} est maintenant salarie. Identifiants de pointage : nom « ${f.nom} », code « ${String(code).trim()} ».`
+    });
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function annuler() {
@@ -596,7 +667,7 @@ export default function BaseSalaries({ postes = [] }) {
               </thead>
               <tbody>
                 {postulants.map((f) => (
-                  <tr key={f.id}>
+                  <tr key={f.id} style={{ background: fondLigne(f) }}>
                     <td style={{ fontWeight: 600 }}>{f.nom}</td>
                     <td>{f.prenom}</td>
                     <td>{formatDate(f.date_naissance)}</td>
@@ -621,7 +692,19 @@ export default function BaseSalaries({ postes = [] }) {
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 12, marginRight: 8 }}>
+                          {CASES_SUIVI.map((c) => (
+                            <label key={c.champ} style={styles.caseSuivi}>
+                              <input
+                                type="checkbox"
+                                checked={!!f[c.champ]}
+                                onChange={(e) => basculerSuivi(f, c.champ, e.target.checked)}
+                              />
+                              {c.libelle}
+                            </label>
+                          ))}
+                        </div>
                         <button className="btn btn-primary btn-sm" onClick={() => integrer(f)}>
                           Integrer
                         </button>
@@ -693,6 +776,11 @@ export default function BaseSalaries({ postes = [] }) {
                               {dispo}
                             </span>
                           )}
+                          {f.employee_id && (
+                            <span className="pill pill-info" style={{ marginLeft: 8 }}>
+                              Salarie
+                            </span>
+                          )}
                         </div>
                         <div className="list-row-sub">
                           {[f.poste, [f.ville, f.pays].filter(Boolean).join(', '), formatEuros(f.taux_horaire) && `${formatEuros(f.taux_horaire)}/h`]
@@ -706,6 +794,11 @@ export default function BaseSalaries({ postes = [] }) {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      {!f.employee_id && (
+                        <button className="btn btn-primary btn-sm" onClick={() => ajouterCommeSalarie(f)}>
+                          Ajouter comme salarie
+                        </button>
+                      )}
                       <button className="btn btn-ghost btn-sm" onClick={() => setOuverte(detail ? null : f.id)}>
                         {detail ? 'Fermer' : 'Details'}
                       </button>
