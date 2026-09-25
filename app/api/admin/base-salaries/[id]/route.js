@@ -33,7 +33,9 @@ export async function PATCH(request, { params }) {
       telephone = ${f.telephone}, email = ${f.email}, ville = ${f.ville}, pays = ${f.pays}, poste = ${f.poste},
       langues = ${f.langues}, taux_horaire = ${f.taux_horaire}, dispo_ete = ${f.dispo_ete},
       dispo_hiver = ${f.dispo_hiver}, cv_texte = ${f.cv_texte}, cv_url = ${f.cv_url},
-      cv_nom = ${f.cv_nom}, photo_url = ${f.photo_url}, updated_at = now()
+      cv_nom = ${f.cv_nom}, photo_url = ${f.photo_url}, nationalite = ${f.nationalite},
+      statut = ${f.statut}, date_postulation = ${f.date_postulation},
+      date_entretien = ${f.date_entretien}, updated_at = now()
     WHERE id = ${id};
   `;
 

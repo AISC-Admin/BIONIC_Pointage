@@ -16,6 +16,10 @@ function ficheVide() {
     email: '',
     ville: '',
     pays: '',
+    nationalite: '',
+    statut: 'base',
+    date_postulation: '',
+    date_entretien: '',
     poste: '',
     langues: '',
     taux_horaire: '',
@@ -90,6 +94,27 @@ const PAYS = [
   "Cote d'Ivoire", 'Cameroun', 'Canada', 'Etats-Unis'
 ];
 
+function aujourdhui() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Tri du tableau des postulants : entretiens les plus proches d'abord, puis
+// ceux sans date d'entretien (par date de postulation).
+function trierPostulants(a, b) {
+  if (a.date_entretien && b.date_entretien) return a.date_entretien.localeCompare(b.date_entretien);
+  if (a.date_entretien) return -1;
+  if (b.date_entretien) return 1;
+  return (a.date_postulation || '').localeCompare(b.date_postulation || '');
+}
+
+const NATIONALITES = [
+  'Francaise', 'Estonienne', 'Espagnole', 'Belge', 'Suisse', 'Luxembourgeoise', 'Monegasque',
+  'Italienne', 'Allemande', 'Portugaise', 'Britannique', 'Irlandaise', 'Neerlandaise',
+  'Finlandaise', 'Lettone', 'Lituanienne', 'Polonaise', 'Roumaine', 'Ukrainienne', 'Marocaine',
+  'Algerienne', 'Tunisienne', 'Senegalaise', 'Ivoirienne', 'Camerounaise', 'Canadienne', 'Americaine'
+];
+
 function libelleDispo(f) {
   if (f.dispo_ete && f.dispo_hiver) return 'Ete + Hiver';
   if (f.dispo_ete) return 'Ete';
@@ -124,6 +149,18 @@ const styles = {
     fontSize: 12,
     flexShrink: 0
   },
+  typeBtn: (actif) => ({
+    flex: 1,
+    padding: '12px 14px',
+    border: `1px solid ${actif ? 'var(--blue-500)' : 'var(--border)'}`,
+    background: actif ? 'var(--blue-500)' : 'var(--surface)',
+    color: actif ? '#fff' : 'var(--text)',
+    fontWeight: 600,
+    fontSize: 14,
+    cursor: 'pointer',
+    borderRadius: 'var(--radius)',
+    fontFamily: 'inherit'
+  }),
   check: { display: 'flex', alignItems: 'center', gap: 8, textTransform: 'none', fontSize: 14, cursor: 'pointer', color: 'var(--text)', letterSpacing: 0, fontWeight: 500 }
 };
 
@@ -215,7 +252,14 @@ export default function BaseSalaries({ postes = [] }) {
         setMessage({ type: 'error', texte: data.erreur || 'Enregistrement impossible.' });
         return;
       }
-      setMessage({ type: 'success', texte: editionId ? 'Fiche mise a jour.' : 'Fiche ajoutee.' });
+      setMessage({
+        type: 'success',
+        texte: editionId
+          ? 'Fiche mise a jour.'
+          : form.statut === 'postulant'
+            ? "Postulant ajoute au tableau pre-entretien d'embauche."
+            : 'Fiche ajoutee a la base.'
+      });
       setForm(ficheVide());
       setEditionId(null);
       charger();
@@ -236,6 +280,34 @@ export default function BaseSalaries({ postes = [] }) {
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  function choisirType(statut) {
+    setForm((f) => ({
+      ...f,
+      statut,
+      date_postulation: statut === 'postulant' && !f.date_postulation ? aujourdhui() : f.date_postulation
+    }));
+  }
+
+  // Apres l'entretien : le postulant passe dans la base complete, puis sa
+  // fiche s'ouvre en modification pour la completer (taux, dispo, CV...).
+  async function integrer(f) {
+    if (!window.confirm(`Integrer ${f.prenom || ''} ${f.nom} dans la base de donnees salaries ?`)) return;
+    const fiche = { ...f, statut: 'base' };
+    const res = await fetch(`/api/admin/base-salaries/${f.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fiche)
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setMessage({ type: 'error', texte: data.erreur || 'Integration impossible.' });
+      return;
+    }
+    await charger();
+    modifier(fiche);
+    setMessage({ type: 'success', texte: `${f.prenom || ''} ${f.nom} est maintenant dans la base : completez sa fiche si besoin.` });
+  }
+
   function annuler() {
     setEditionId(null);
     setForm(ficheVide());
@@ -251,31 +323,59 @@ export default function BaseSalaries({ postes = [] }) {
     }
   }
 
+  const postulants = useMemo(
+    () => fiches.filter((f) => f.statut === 'postulant').sort(trierPostulants),
+    [fiches]
+  );
+  const fichesBase = useMemo(() => fiches.filter((f) => f.statut !== 'postulant'), [fiches]);
+
   const fichesFiltrees = useMemo(() => {
     const q = recherche.trim().toLowerCase();
-    return fiches.filter((f) => {
+    return fichesBase.filter((f) => {
       if (filtreDispo === 'ete' && !f.dispo_ete) return false;
       if (filtreDispo === 'hiver' && !f.dispo_hiver) return false;
       if (filtreDispo === 'deux' && !(f.dispo_ete && f.dispo_hiver)) return false;
       if (!q) return true;
-      return [f.nom, f.prenom, f.ville, f.pays, f.poste, f.langues, f.email, f.telephone]
+      return [f.nom, f.prenom, f.ville, f.pays, f.nationalite, f.poste, f.langues, f.email, f.telephone]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [fiches, recherche, filtreDispo]);
+  }, [fichesBase, recherche, filtreDispo]);
+  const estPostulant = form.statut === 'postulant';
+  const auj = aujourdhui();
 
   const lesDeux = form.dispo_ete && form.dispo_hiver;
 
   return (
     <>
       <div className="card" ref={formRef}>
-        <div className="card-title">{editionId ? 'Modifier la fiche' : 'Ajouter une fiche'}</div>
+        <div className="card-title">
+          {editionId
+            ? estPostulant
+              ? 'Modifier le postulant'
+              : 'Modifier la fiche'
+            : estPostulant
+              ? 'Ajouter un postulant (pre-entretien)'
+              : 'Ajouter une fiche'}
+        </div>
 
         {message && (
           <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'}`}>{message.texte}</div>
         )}
 
         <form onSubmit={enregistrer}>
+          <div className="field">
+            <label>Type de fiche</label>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button type="button" style={styles.typeBtn(!estPostulant)} onClick={() => choisirType('base')}>
+                Salarie dans la base
+              </button>
+              <button type="button" style={styles.typeBtn(estPostulant)} onClick={() => choisirType('postulant')}>
+                Postulant (pre-entretien d'embauche)
+              </button>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
             {form.photo_url ? (
               <img src={lienFichier(form.photo_url)} alt="Photo" style={styles.photoForm} />
@@ -308,6 +408,15 @@ export default function BaseSalaries({ postes = [] }) {
               <label>Date de naissance</label>
               <input type="date" value={form.date_naissance} onChange={(e) => maj('date_naissance', e.target.value)} />
             </div>
+            <div className="field">
+              <label>Nationalite</label>
+              <input type="text" list="bs-nationalites" value={form.nationalite} onChange={(e) => maj('nationalite', e.target.value)} />
+              <datalist id="bs-nationalites">
+                {NATIONALITES.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+            </div>
           </div>
 
           <div className="row">
@@ -324,7 +433,7 @@ export default function BaseSalaries({ postes = [] }) {
               <input type="text" value={form.ville} onChange={(e) => maj('ville', e.target.value)} />
             </div>
             <div className="field">
-              <label>Pays</label>
+              <label>Pays de residence</label>
               <input type="text" list="bs-pays" value={form.pays} onChange={(e) => maj('pays', e.target.value)} />
               <datalist id="bs-pays">
                 {PAYS.map((p) => (
@@ -336,7 +445,7 @@ export default function BaseSalaries({ postes = [] }) {
 
           <div className="row">
             <div className="field">
-              <label>Poste</label>
+              <label>{estPostulant ? 'Poste vise' : 'Poste'}</label>
               <input type="text" list="bs-postes" value={form.poste} onChange={(e) => maj('poste', e.target.value)} />
               <datalist id="bs-postes">
                 {postes.map((p) => (
@@ -364,6 +473,23 @@ export default function BaseSalaries({ postes = [] }) {
               />
             </div>
           </div>
+
+          {estPostulant && (
+            <div className="row">
+              <div className="field">
+                <label>Date de postulation</label>
+                <input
+                  type="date"
+                  value={form.date_postulation}
+                  onChange={(e) => maj('date_postulation', e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Date d'entretien</label>
+                <input type="date" value={form.date_entretien} onChange={(e) => maj('date_entretien', e.target.value)} />
+              </div>
+            </div>
+          )}
 
           <div className="field">
             <label>Disponibilites</label>
@@ -425,7 +551,13 @@ export default function BaseSalaries({ postes = [] }) {
 
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn btn-primary" type="submit" disabled={enregistrement || envoiCv || envoiPhoto}>
-              {enregistrement ? 'Enregistrement...' : editionId ? 'Enregistrer les modifications' : 'Ajouter la fiche'}
+              {enregistrement
+                ? 'Enregistrement...'
+                : editionId
+                  ? 'Enregistrer les modifications'
+                  : estPostulant
+                    ? 'Ajouter le postulant'
+                    : 'Ajouter la fiche'}
             </button>
             {editionId && (
               <button type="button" className="btn btn-secondary" onClick={annuler}>
@@ -437,9 +569,82 @@ export default function BaseSalaries({ postes = [] }) {
       </div>
 
       <div className="card">
+        <div className="card-title">Pre-entretien d'embauche ({postulants.length})</div>
+        {chargement ? (
+          <div className="muted small">Chargement...</div>
+        ) : postulants.length === 0 ? (
+          <div className="empty-state">
+            Aucun postulant. Choisissez &laquo; Postulant &raquo; dans le formulaire ci-dessus pour en ajouter un.
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Prenom</th>
+                  <th>Date de naissance</th>
+                  <th>Nationalite</th>
+                  <th>Pays de residence</th>
+                  <th>Email</th>
+                  <th>Telephone</th>
+                  <th>Poste</th>
+                  <th>Date postulation</th>
+                  <th>Date entretien</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {postulants.map((f) => (
+                  <tr key={f.id}>
+                    <td style={{ fontWeight: 600 }}>{f.nom}</td>
+                    <td>{f.prenom}</td>
+                    <td>{formatDate(f.date_naissance)}</td>
+                    <td>{f.nationalite}</td>
+                    <td>{f.pays}</td>
+                    <td>{f.email && <a href={`mailto:${f.email}`}>{f.email}</a>}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{f.telephone && <a href={`tel:${f.telephone}`}>{f.telephone}</a>}</td>
+                    <td>{f.poste}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatDate(f.date_postulation)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {f.date_entretien ? (
+                        <>
+                          {formatDate(f.date_entretien)}
+                          {f.date_entretien === auj && (
+                            <span className="pill pill-warning" style={{ marginLeft: 6 }}>
+                              Aujourd'hui
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="muted">A fixer</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => integrer(f)}>
+                          Integrer
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => modifier(f)}>
+                          Modifier
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => supprimer(f)}>
+                          Supprimer
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
         <div className="card-title">
           Base de donnees salaries ({fichesFiltrees.length}
-          {fichesFiltrees.length !== fiches.length ? ` / ${fiches.length}` : ''})
+          {fichesFiltrees.length !== fichesBase.length ? ` / ${fichesBase.length}` : ''})
         </div>
 
         <div className="row" style={{ marginBottom: 8 }}>
@@ -514,6 +719,8 @@ export default function BaseSalaries({ postes = [] }) {
                   </div>
                   {detail && (
                     <div className="small" style={{ padding: '0 0 14px 60px', lineHeight: 1.6 }}>
+                      {f.nationalite && <div>Nationalite : {f.nationalite}</div>}
+                      {f.date_entretien && <div>Entretien le {formatDate(f.date_entretien)}</div>}
                       {f.date_naissance && (
                         <div>
                           Ne(e) le {formatDate(f.date_naissance)}
@@ -529,7 +736,7 @@ export default function BaseSalaries({ postes = [] }) {
                         </div>
                       )}
                       {f.cv_texte && <div style={{ whiteSpace: 'pre-wrap', marginTop: 6 }}>{f.cv_texte}</div>}
-                      {!f.date_naissance && !f.cv_url && !f.cv_texte && <div className="muted">Aucun detail.</div>}
+                      {!f.date_naissance && !f.nationalite && !f.cv_url && !f.cv_texte && <div className="muted">Aucun detail.</div>}
                     </div>
                   )}
                 </div>
