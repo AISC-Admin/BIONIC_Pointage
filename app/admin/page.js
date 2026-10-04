@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Brand } from '../components/Brand';
 import BaseSalaries from '../components/BaseSalaries';
+import BaseClients from '../components/BaseClients';
+import Facturation from '../components/Facturation';
 
 const MOIS_LABELS = [
   'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -36,7 +38,9 @@ const ONGLETS = [
   { id: 'planning', label: 'Planning' },
   { id: 'rapport', label: 'Rapport' },
   { id: 'anomalies', label: 'Anomalies' },
-  { id: 'base', label: 'Base de donnees salaries' }
+  { id: 'base', label: 'Base de donnees salaries' },
+  { id: 'clients', label: 'Clients' },
+  { id: 'facturation', label: 'Facturation' }
 ];
 
 // Libelles et styles des types d'anomalies renvoyees par
@@ -1389,6 +1393,10 @@ export default function AdminPage() {
         )}
 
         {onglet === 'base' && <BaseSalaries postes={postes} onSalarieCree={chargerTout} />}
+
+        {onglet === 'clients' && <BaseClients postes={postes} onSitesModifies={chargerTout} />}
+
+        {onglet === 'facturation' && <Facturation mois={mois} libelleMois={libelleMois} />}
       </div>
     </div>
   );

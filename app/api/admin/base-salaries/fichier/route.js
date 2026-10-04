@@ -15,7 +15,7 @@ export async function GET(request) {
   } catch {
     return new Response('URL invalide.', { status: 400 });
   }
-  if (!cible.hostname.endsWith('.blob.vercel-storage.com') || !cible.pathname.startsWith('/base-salaries/')) {
+  if (!cible.hostname.endsWith('.blob.vercel-storage.com') || !(cible.pathname.startsWith('/base-salaries/') || cible.pathname.startsWith('/clients/'))) {
     return new Response('Fichier non autorise.', { status: 400 });
   }
 

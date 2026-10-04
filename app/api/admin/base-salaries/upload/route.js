@@ -26,7 +26,10 @@ export async function POST(request) {
       onBeforeGenerateToken: async (pathname) => {
         const session = await requireAdminSession();
         if (!session) throw new Error('Acces refuse.');
-        if (!pathname.startsWith('base-salaries/')) throw new Error('Chemin non autorise.');
+        // base-salaries/ : CV et photos ; clients/ : documents contractuels clients.
+        if (!pathname.startsWith('base-salaries/') && !pathname.startsWith('clients/')) {
+          throw new Error('Chemin non autorise.');
+        }
         return {
           allowedContentTypes: TYPES_AUTORISES,
           maximumSizeInBytes: 10 * 1024 * 1024,
