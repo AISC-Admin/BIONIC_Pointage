@@ -18,7 +18,7 @@ export async function PATCH(request, { params }) {
       pays = ${c.pays}, contact_nom = ${c.contact_nom}, contact_fonction = ${c.contact_fonction},
       contact_email = ${c.contact_email}, contact_telephone = ${c.contact_telephone},
       email_facturation = ${c.email_facturation}, conditions_paiement = ${c.conditions_paiement},
-      notes = ${c.notes}, actif = ${c.actif}, updated_at = now()
+      notes = ${c.notes}, actif = ${c.actif}, societe_id = ${c.societe_id}, updated_at = now()
     WHERE id = ${id} RETURNING id;
   `;
   if (rows.length === 0) return NextResponse.json({ erreur: 'Client introuvable.' }, { status: 404 });

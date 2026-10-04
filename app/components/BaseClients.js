@@ -37,7 +37,8 @@ function clientVide() {
     email_facturation: '',
     conditions_paiement: '',
     notes: '',
-    actif: true
+    actif: true,
+    societe_id: ''
   };
 }
 
@@ -76,6 +77,7 @@ export default function BaseClients({ postes = [], onSitesModifies }) {
   const [sites, setSites] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [tarifs, setTarifs] = useState([]);
+  const [societes, setSocietes] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [form, setForm] = useState(clientVide());
   const [editionId, setEditionId] = useState(null);
@@ -93,6 +95,7 @@ export default function BaseClients({ postes = [], onSitesModifies }) {
       setSites(data.sites);
       setDocuments(data.documents);
       setTarifs(data.tarifs);
+      setSocietes(data.societes || []);
     }
     setChargement(false);
   }, []);
@@ -299,6 +302,17 @@ export default function BaseClients({ postes = [], onSitesModifies }) {
               <label>Conditions de paiement</label>
               <input type="text" placeholder="30 jours fin de mois..." value={form.conditions_paiement} onChange={(e) => maj('conditions_paiement', e.target.value)} />
             </div>
+            <div className="field">
+              <label>Societe qui facture par defaut</label>
+              <select value={form.societe_id ?? ''} onChange={(e) => maj('societe_id', e.target.value)}>
+                <option value="">{societes[0] ? `${societes[0].nom} (defaut)` : 'Societe par defaut'}</option>
+                {societes.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="field" style={{ display: 'flex', alignItems: 'flex-end' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, textTransform: 'none', letterSpacing: 0, fontSize: 14, cursor: 'pointer' }}>
                 <input type="checkbox" checked={!!form.actif} onChange={(e) => maj('actif', e.target.checked)} />
@@ -366,6 +380,11 @@ export default function BaseClients({ postes = [], onSitesModifies }) {
                         <span className="pill pill-success" style={{ marginLeft: 6 }}>
                           {docs.length} doc{docs.length > 1 ? 's' : ''}
                         </span>
+                        {c.societe_id && (
+                          <span className="pill" style={{ marginLeft: 6, background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+                            Facture par {societes.find((x) => x.id === c.societe_id)?.nom || '?'}
+                          </span>
+                        )}
                       </div>
                       <div className="list-row-sub">
                         {[[c.adresse, [c.code_postal, c.ville].filter(Boolean).join(' ')].filter(Boolean).join(', '), c.siret && `SIRET ${c.siret}`]
