@@ -14,7 +14,8 @@ export async function GET() {
       to_char(date_entretien, 'YYYY-MM-DD') AS date_entretien,
       poste, langues, taux_horaire, dispo_ete, dispo_hiver,
       cv_texte, cv_url, cv_nom, photo_url, created_at, updated_at,
-      mail_envoye, entretien_passe, valide_recruteur, employee_id
+      mail_envoye, entretien_passe, valide_recruteur, employee_id,
+      (SELECT COUNT(*)::int FROM base_salaries_photos p WHERE p.fiche_id = base_salaries.id) AS nb_photos
     FROM base_salaries
     ORDER BY lower(nom), lower(coalesce(prenom, ''));
   `;

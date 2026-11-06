@@ -5,6 +5,9 @@ import { Brand } from '../components/Brand';
 import BaseSalaries from '../components/BaseSalaries';
 import BaseClients from '../components/BaseClients';
 import Facturation from '../components/Facturation';
+import GaleriePhotos from '../components/GaleriePhotos';
+import TraducteurAdmin, { useLangueAdmin, SelecteurLangueAdmin } from '../components/TraducteurAdmin';
+import { POSTES_BOOK, estPosteBook } from '@/lib/postesBook';
 
 const MOIS_LABELS = [
   'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -63,6 +66,7 @@ export default function AdminPage() {
   const [erreurConnexion, setErreurConnexion] = useState('');
   const [connexionEnCours, setConnexionEnCours] = useState(false);
 
+  const [langueAdmin, setLangueAdmin] = useLangueAdmin();
   const [onglet, setOnglet] = useState('vacations');
   const [mois, setMois] = useState(moisCourant());
 
@@ -235,6 +239,19 @@ export default function AdminPage() {
   const [datesOuverte, setDatesOuverte] = useState(null);
   const [dateEntreeEdit, setDateEntreeEdit] = useState({});
   const [dateSortieEdit, setDateSortieEdit] = useState({});
+  const [bookOuvert, setBookOuvert] = useState(null);
+  const [bookPoste, setBookPoste] = useState(POSTES_BOOK[0]);
+
+  // Salarie sans fiche dans la base : on lui cree sa fiche (avec le poste
+  // choisi) pour pouvoir deposer son book photos.
+  async function creerFicheBook(e) {
+    const res = await fetch(`/api/admin/employees/${e.id}/fiche`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poste: bookPoste })
+    });
+    if (res.ok) chargerTout();
+  }
 
   async function ajouterEmploye(e) {
     e.preventDefault();
@@ -377,8 +394,11 @@ export default function AdminPage() {
 
   // --- Sites ---
   const [nouvSite, setNouvSite] = useState('');
+  const [siteMessage, setSiteMessage] = useState(null);
+  const [siteEdition, setSiteEdition] = useState(null); // { id, nom }
   async function ajouterSite(e) {
     e.preventDefault();
+    setSiteMessage(null);
     const res = await fetch('/api/admin/sites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -387,7 +407,26 @@ export default function AdminPage() {
     if (res.ok) {
       setNouvSite('');
       chargerTout();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setSiteMessage({ type: 'error', texte: d.erreur || 'Ajout impossible.' });
     }
+  }
+  async function enregistrerSite(e) {
+    e.preventDefault();
+    const res = await fetch(`/api/admin/sites/${siteEdition.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nom: siteEdition.nom })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setSiteMessage({ type: 'error', texte: d.erreur || 'Modification impossible.' });
+      return;
+    }
+    setSiteMessage({ type: 'success', texte: 'Site modifie.' });
+    setSiteEdition(null);
+    chargerTout();
   }
   async function toggleSiteActif(id, actif) {
     await fetch(`/api/admin/sites/${id}`, {
@@ -398,15 +437,23 @@ export default function AdminPage() {
     chargerTout();
   }
   async function supprimerSite(id) {
-    await fetch(`/api/admin/sites/${id}`, { method: 'DELETE' });
+    setSiteMessage(null);
+    const res = await fetch(`/api/admin/sites/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setSiteMessage({ type: 'error', texte: d.erreur || 'Suppression impossible.' });
+    }
     chargerTout();
   }
 
   // --- Postes ---
   const [nouvPoste, setNouvPoste] = useState('');
   const [nouvTaux, setNouvTaux] = useState('');
+  const [posteMessage, setPosteMessage] = useState(null);
+  const [posteEdition, setPosteEdition] = useState(null); // { id, nom, taux_horaire }
   async function ajouterPoste(e) {
     e.preventDefault();
+    setPosteMessage(null);
     const res = await fetch('/api/admin/postes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -416,7 +463,29 @@ export default function AdminPage() {
       setNouvPoste('');
       setNouvTaux('');
       chargerTout();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setPosteMessage({ type: 'error', texte: d.erreur || 'Ajout impossible.' });
     }
+  }
+  async function enregistrerPoste(e) {
+    e.preventDefault();
+    const res = await fetch(`/api/admin/postes/${posteEdition.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nom: posteEdition.nom, taux_horaire: posteEdition.taux_horaire })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setPosteMessage({ type: 'error', texte: d.erreur || 'Modification impossible.' });
+      return;
+    }
+    setPosteMessage({
+      type: 'success',
+      texte: 'Poste modifie. Un nouveau taux horaire s\'applique aux vacations saisies a partir de maintenant.'
+    });
+    setPosteEdition(null);
+    chargerTout();
   }
   async function togglePosteActif(id, actif) {
     await fetch(`/api/admin/postes/${id}`, {
@@ -427,7 +496,12 @@ export default function AdminPage() {
     chargerTout();
   }
   async function supprimerPoste(id) {
-    await fetch(`/api/admin/postes/${id}`, { method: 'DELETE' });
+    setPosteMessage(null);
+    const res = await fetch(`/api/admin/postes/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setPosteMessage({ type: 'error', texte: d.erreur || 'Suppression impossible.' });
+    }
     chargerTout();
   }
 
@@ -534,7 +608,11 @@ export default function AdminPage() {
     return (
       <div className="page">
         <div className="auth-wrap">
+          <TraducteurAdmin langue={langueAdmin} />
           <div className="auth-card">
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+              <SelecteurLangueAdmin langue={langueAdmin} onChange={setLangueAdmin} sombre />
+            </div>
             <div className="auth-brand">
               <Brand subtitle="Espace responsable" />
             </div>
@@ -566,9 +644,13 @@ export default function AdminPage() {
       <div className="topbar">
         <div className="topbar-inner">
           <Brand subtitle="Espace responsable" />
-          <button className="btn btn-ghost" onClick={deconnexion}>
-            Deconnexion
-          </button>
+          <TraducteurAdmin langue={langueAdmin} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SelecteurLangueAdmin langue={langueAdmin} onChange={setLangueAdmin} sombre />
+            <button className="btn btn-ghost" onClick={deconnexion}>
+              Deconnexion
+            </button>
+          </div>
         </div>
       </div>
 
@@ -664,7 +746,8 @@ export default function AdminPage() {
               {(summary?.parSite || []).length === 0 ? (
                 <div className="empty-state">Aucune vacation enregistree ce mois-ci.</div>
               ) : (
-                (summary?.parSite || []).map((site) => (
+                <div className="scroll-zone">
+                {(summary?.parSite || []).map((site) => (
                   <div key={site.siteId} style={{ marginBottom: 18 }}>
                     <div className="flex-between" style={{ marginBottom: 8 }}>
                       <div style={{ fontWeight: 600 }}>{site.nom}</div>
@@ -694,7 +777,8 @@ export default function AdminPage() {
                       </table>
                     </div>
                   </div>
-                ))
+                ))}
+                </div>
               )}
             </div>
 
@@ -847,8 +931,18 @@ export default function AdminPage() {
                   <div key={e.id}>
                     <div className="list-row">
                       <div className="list-row-main">
-                        <div className="list-row-title">{e.prenom ? `${e.prenom} ${e.nom}` : e.nom}</div>
+                        <div className="list-row-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {e.fiche_photo_url && (
+                            <img
+                              src={`/api/admin/base-salaries/fichier?url=${encodeURIComponent(e.fiche_photo_url)}`}
+                              alt=""
+                              style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                            />
+                          )}
+                          {e.prenom ? `${e.prenom} ${e.nom}` : e.nom}
+                        </div>
                         <div className="list-row-sub">
+                          {e.fiche_poste && <span style={{ marginRight: 8 }}>{e.fiche_poste} ·</span>}
                           {e.actif ? 'Actif' : 'Inactif'}
                           {e.taux_horaire != null && (
                             <span className="pill pill-success" style={{ marginLeft: 8 }}>
@@ -896,6 +990,14 @@ export default function AdminPage() {
                         >
                           {e.actif ? 'Desactiver' : 'Activer'}
                         </button>
+                        {(!e.fiche_id || estPosteBook(e.fiche_poste) || e.nb_photos > 0) && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setBookOuvert(bookOuvert === e.id ? null : e.id)}
+                          >
+                            {bookOuvert === e.id ? 'Fermer le book' : `Book photos${e.nb_photos ? ` (${e.nb_photos})` : ''}`}
+                          </button>
+                        )}
                         <button className="btn btn-secondary btn-sm" onClick={() => ouvrirEditionNom(e)}>
                           {editionOuverte === e.id ? 'Fermer' : 'Corriger le nom'}
                         </button>
@@ -910,6 +1012,33 @@ export default function AdminPage() {
                         </button>
                       </div>
                     </div>
+                    {bookOuvert === e.id && (
+                      <div className="entry" style={{ marginBottom: 10 }}>
+                        {e.fiche_id ? (
+                          <GaleriePhotos ficheId={e.fiche_id} onChange={chargerTout} />
+                        ) : (
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                            <div className="field" style={{ margin: 0, minWidth: 220 }}>
+                              <label>Poste du profil</label>
+                              <select value={bookPoste} onChange={(ev) => setBookPoste(ev.target.value)}>
+                                {POSTES_BOOK.map((b) => (
+                                  <option key={b} value={b}>
+                                    {b}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <button className="btn btn-primary btn-sm" onClick={() => creerFicheBook(e)}>
+                              Creer sa fiche et ouvrir le book
+                            </button>
+                            <div className="small muted" style={{ flexBasis: '100%' }}>
+                              Ce salarie n&apos;a pas encore de fiche dans la base de donnees salaries : elle sera creee avec ce
+                              poste pour accueillir ses photos.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {editionOuverte === e.id && (
                       <div className="entry" style={{ marginBottom: 10 }}>
                         <div className="row">
@@ -1093,6 +1222,9 @@ export default function AdminPage() {
         {onglet === 'sites' && (
           <div className="card">
             <div className="card-title">Ajouter un site</div>
+            {siteMessage && (
+              <div className={`alert ${siteMessage.type === 'error' ? 'alert-error' : 'alert-success'}`}>{siteMessage.texte}</div>
+            )}
             <form onSubmit={ajouterSite} className="row">
               <div className="field">
                 <label>Nom du site</label>
@@ -1106,13 +1238,44 @@ export default function AdminPage() {
             </form>
 
             <div style={{ marginTop: 22 }} className="list">
-              {sites.map((s) => (
+              {sites.map((s) =>
+                siteEdition?.id === s.id ? (
+                  <form className="list-row" key={s.id} onSubmit={enregistrerSite} style={{ flexWrap: 'wrap' }}>
+                    <div className="field" style={{ margin: 0, flex: 1, minWidth: 200 }}>
+                      <label>Nom du site</label>
+                      <input
+                        type="text"
+                        value={siteEdition.nom}
+                        onChange={(e) => setSiteEdition((x) => ({ ...x, nom: e.target.value }))}
+                        autoFocus
+                        required
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
+                      <button className="btn btn-primary btn-sm" type="submit">
+                        Enregistrer
+                      </button>
+                      <button className="btn btn-secondary btn-sm" type="button" onClick={() => setSiteEdition(null)}>
+                        Annuler
+                      </button>
+                    </div>
+                  </form>
+                ) : (
                 <div className="list-row" key={s.id}>
                   <div className="list-row-main">
                     <div className="list-row-title">{s.nom}</div>
                     <div className="list-row-sub">{s.actif ? 'Actif' : 'Inactif'}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        setSiteMessage(null);
+                        setSiteEdition({ id: s.id, nom: s.nom });
+                      }}
+                    >
+                      Modifier
+                    </button>
                     <button className="btn btn-secondary btn-sm" onClick={() => toggleSiteActif(s.id, !s.actif)}>
                       {s.actif ? 'Desactiver' : 'Activer'}
                     </button>
@@ -1121,7 +1284,8 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </div>
-              ))}
+                )
+              )}
             </div>
           </div>
         )}
@@ -1129,6 +1293,9 @@ export default function AdminPage() {
         {onglet === 'postes' && (
           <div className="card">
             <div className="card-title">Ajouter un poste</div>
+            {posteMessage && (
+              <div className={`alert ${posteMessage.type === 'error' ? 'alert-error' : 'alert-success'}`}>{posteMessage.texte}</div>
+            )}
             <form onSubmit={ajouterPoste} className="row">
               <div className="field">
                 <label>Nom du poste</label>
@@ -1153,7 +1320,42 @@ export default function AdminPage() {
             </form>
 
             <div style={{ marginTop: 22 }} className="list">
-              {postes.map((p) => (
+              {postes.map((p) =>
+                posteEdition?.id === p.id ? (
+                  <form className="list-row" key={p.id} onSubmit={enregistrerPoste} style={{ flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 260, flexWrap: 'wrap' }}>
+                      <div className="field" style={{ margin: 0, flex: 2, minWidth: 160 }}>
+                        <label>Nom du poste</label>
+                        <input
+                          type="text"
+                          value={posteEdition.nom}
+                          onChange={(e) => setPosteEdition((x) => ({ ...x, nom: e.target.value }))}
+                          autoFocus
+                          required
+                        />
+                      </div>
+                      <div className="field" style={{ margin: 0, flex: 1, minWidth: 120 }}>
+                        <label>Taux horaire (EUR)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={posteEdition.taux_horaire}
+                          onChange={(e) => setPosteEdition((x) => ({ ...x, taux_horaire: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
+                      <button className="btn btn-primary btn-sm" type="submit">
+                        Enregistrer
+                      </button>
+                      <button className="btn btn-secondary btn-sm" type="button" onClick={() => setPosteEdition(null)}>
+                        Annuler
+                      </button>
+                    </div>
+                  </form>
+                ) : (
                 <div className="list-row" key={p.id}>
                   <div className="list-row-main">
                     <div className="list-row-title">{p.nom}</div>
@@ -1162,6 +1364,15 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        setPosteMessage(null);
+                        setPosteEdition({ id: p.id, nom: p.nom, taux_horaire: String(p.taux_horaire ?? '') });
+                      }}
+                    >
+                      Modifier
+                    </button>
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => togglePosteActif(p.id, !p.actif)}
@@ -1173,7 +1384,8 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </div>
-              ))}
+                )
+              )}
             </div>
           </div>
         )}
@@ -1339,7 +1551,8 @@ export default function AdminPage() {
               {planningParEmploye().length === 0 ? (
                 <div className="empty-state">Aucun planning envoye pour ce mois.</div>
               ) : (
-                planningParEmploye().map((groupe) => (
+                <div className="scroll-zone">
+                {planningParEmploye().map((groupe) => (
                   <div key={groupe.employeeId} style={{ marginBottom: 18 }}>
                     <div className="flex-between" style={{ marginBottom: 8 }}>
                       <div style={{ fontWeight: 600 }}>
@@ -1386,7 +1599,8 @@ export default function AdminPage() {
                       ))}
                     </div>
                   </div>
-                ))
+                ))}
+                </div>
               )}
             </div>
           </>

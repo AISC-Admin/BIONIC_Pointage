@@ -40,6 +40,14 @@ export async function PATCH(request, { params }) {
   `;
 
   const anciens = avant[0];
+  // Une ancienne photo principale qui fait partie du book ne doit pas etre
+  // effacee du stockage : elle reste dans la galerie.
+  if (anciens.photo_url && anciens.photo_url !== f.photo_url) {
+    const { rows: dansBook } = await sql`
+      SELECT 1 FROM base_salaries_photos WHERE fiche_id = ${id} AND url = ${anciens.photo_url} LIMIT 1;
+    `;
+    if (dansBook.length > 0) anciens.photo_url = null;
+  }
   await supprimerFichiers([
     anciens.cv_url !== f.cv_url ? anciens.cv_url : null,
     anciens.photo_url !== f.photo_url ? anciens.photo_url : null
@@ -53,7 +61,11 @@ export async function DELETE(request, { params }) {
   if (!session) return NextResponse.json({ erreur: 'Acces refuse.' }, { status: 403 });
   await ensureBaseSalariesSchema();
   const { id } = await params;
+  const { rows: book } = await sql`SELECT url FROM base_salaries_photos WHERE fiche_id = ${id};`;
   const { rows } = await sql`DELETE FROM base_salaries WHERE id = ${id} RETURNING cv_url, photo_url;`;
-  if (rows.length > 0) await supprimerFichiers([rows[0].cv_url, rows[0].photo_url]);
+  if (rows.length > 0) {
+    const urls = new Set([rows[0].cv_url, rows[0].photo_url, ...book.map((b) => b.url)].filter(Boolean));
+    await supprimerFichiers([...urls]);
+  }
   return NextResponse.json({ ok: true });
 }

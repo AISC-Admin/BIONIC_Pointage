@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState, useCallback } from 'react';
+import Devis from './Devis';
 
 // Onglet "Facturation" : listing mensuel a facturer, par site (un client
 // peut avoir plusieurs sites, chacun facture separement). Seules les
@@ -131,6 +132,7 @@ export default function Facturation({ mois, libelleMois }) {
   const libelle = libelleMois ? libelleMois(mois) : mois;
 
   return (
+    <>
     <div className="card">
       <div className="flex-between" style={{ marginBottom: 14, flexWrap: 'wrap' }}>
         <div className="card-title" style={{ margin: 0 }}>
@@ -155,6 +157,9 @@ export default function Facturation({ mois, libelleMois }) {
             <div className="stat">
               <div className="stat-label">Montant HT a facturer</div>
               <div className="stat-value accent">{formatEuros(data.total.montant)}</div>
+              {data.total.montantDevis > 0 && (
+                <div className="muted small">dont devis valides : {formatEuros(data.total.montantDevis)}</div>
+              )}
             </div>
             <div className="stat">
               <div className="stat-label">Sites factures</div>
@@ -200,10 +205,61 @@ export default function Facturation({ mois, libelleMois }) {
             </div>
           )}
 
+          {data.devis?.length > 0 && (
+            <div style={{ marginBottom: 18 }}>
+              <div className="flex-between" style={{ marginBottom: 6 }}>
+                <span style={{ fontWeight: 700 }}>Devis valides a facturer</span>
+                <span style={{ fontWeight: 700 }}>{formatEuros(data.total.montantDevis)} HT</span>
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>N°</th>
+                      <th>Client</th>
+                      <th>Site</th>
+                      <th>Objet</th>
+                      <th style={{ textAlign: 'right' }}>Montant HT</th>
+                      <th>Societe emettrice</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.devis.map((d) => (
+                      <tr key={d.id}>
+                        <td style={{ fontWeight: 600 }}>
+                          {d.pdf_url ? (
+                            <a href={`/api/admin/base-salaries/fichier?url=${encodeURIComponent(d.pdf_url)}`} target="_blank" rel="noreferrer">
+                              {d.numero}
+                            </a>
+                          ) : (
+                            d.numero
+                          )}
+                        </td>
+                        <td>{d.client}</td>
+                        <td>{d.site || <span className="muted">-</span>}</td>
+                        <td style={{ whiteSpace: 'normal' }}>{d.objet}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatEuros(d.montant_ht)}</td>
+                        <td>
+                          <span
+                            className="pill"
+                            style={{ background: couleur(d.societe_id).bg, color: couleur(d.societe_id).fg, textTransform: 'none', letterSpacing: 0 }}
+                          >
+                            {d.societe}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {data.sites.length === 0 ? (
             <div className="empty-state">Aucune vacation validee pour ce mois.</div>
           ) : (
-            data.sites.map((s) => (
+            <div className="scroll-zone">
+            {data.sites.map((s) => (
               <div key={s.site_id} style={{ marginBottom: 18 }}>
                 <div className="flex-between" style={{ marginBottom: 6 }}>
                   <div>
@@ -328,7 +384,8 @@ export default function Facturation({ mois, libelleMois }) {
                   </table>
                 </div>
               </div>
-            ))
+            ))}
+            </div>
           )}
 
           <form onSubmit={ajouterSociete} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 10 }}>
@@ -349,5 +406,8 @@ export default function Facturation({ mois, libelleMois }) {
         </>
       )}
     </div>
+
+    <Devis mois={mois} onChange={charger} />
+    </>
   );
 }

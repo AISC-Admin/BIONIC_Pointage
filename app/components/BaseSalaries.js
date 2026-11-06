@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { upload } from '@vercel/blob/client';
+import GaleriePhotos from './GaleriePhotos';
+import { POSTES_BOOK, estPosteBook, normaliser } from '@/lib/postesBook';
 
 // Onglet "Base de donnees salaries" de l'espace responsable : repertoire des
 // profils (candidats, extras, salaries) avec coordonnees, poste, langues,
@@ -279,6 +281,13 @@ export default function BaseSalaries({ postes = [], onSalarieCree }) {
         setMessage({ type: 'error', texte: data.erreur || 'Enregistrement impossible.' });
         return;
       }
+      // Nouveau profil "book" : la fiche reste ouverte pour ajouter ses photos.
+      if (!editionId && data.id && estPosteBook(form.poste)) {
+        await charger();
+        setEditionId(data.id);
+        setMessage({ type: 'success', texte: 'Fiche creee : ajoutez maintenant les photos du book ci-dessous.' });
+        return;
+      }
       setMessage({
         type: 'success',
         texte: editionId
@@ -522,6 +531,9 @@ export default function BaseSalaries({ postes = [], onSalarieCree }) {
                 {postes.map((p) => (
                   <option key={p.id} value={p.nom} />
                 ))}
+                {POSTES_BOOK.filter((b) => !postes.some((p) => normaliser(p.nom) === normaliser(b))).map((b) => (
+                  <option key={b} value={b} />
+                ))}
               </datalist>
             </div>
             <div className="field">
@@ -619,6 +631,24 @@ export default function BaseSalaries({ postes = [], onSalarieCree }) {
               onChange={(e) => maj('cv_texte', e.target.value)}
             />
           </div>
+
+          {estPosteBook(form.poste) && (
+            <div className="field" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 14, background: 'var(--ivory)' }}>
+              {editionId ? (
+                <GaleriePhotos
+                  ficheId={editionId}
+                  onChange={(principale) => {
+                    maj('photo_url', principale || '');
+                    charger();
+                  }}
+                />
+              ) : (
+                <div className="small muted">
+                  Profil &laquo; {form.poste} &raquo; : apres l&apos;ajout de la fiche, vous pourrez y deposer plusieurs photos (book).
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn btn-primary" type="submit" disabled={enregistrement || envoiCv || envoiPhoto}>
@@ -781,6 +811,11 @@ export default function BaseSalaries({ postes = [], onSalarieCree }) {
                               Salarie
                             </span>
                           )}
+                          {(estPosteBook(f.poste) || f.nb_photos > 0) && (
+                            <span className="pill pill-warning" style={{ marginLeft: 8 }}>
+                              Book · {f.nb_photos || 0} photo{f.nb_photos > 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
                         <div className="list-row-sub">
                           {[f.poste, [f.ville, f.pays].filter(Boolean).join(', '), formatEuros(f.taux_horaire) && `${formatEuros(f.taux_horaire)}/h`]
@@ -829,7 +864,14 @@ export default function BaseSalaries({ postes = [], onSalarieCree }) {
                         </div>
                       )}
                       {f.cv_texte && <div style={{ whiteSpace: 'pre-wrap', marginTop: 6 }}>{f.cv_texte}</div>}
-                      {!f.date_naissance && !f.nationalite && !f.cv_url && !f.cv_texte && <div className="muted">Aucun detail.</div>}
+                      {!f.date_naissance && !f.nationalite && !f.cv_url && !f.cv_texte && !estPosteBook(f.poste) && f.nb_photos === 0 && (
+                        <div className="muted">Aucun detail.</div>
+                      )}
+                      {(estPosteBook(f.poste) || f.nb_photos > 0) && (
+                        <div style={{ marginTop: 12, paddingRight: 12 }}>
+                          <GaleriePhotos ficheId={f.id} onChange={charger} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

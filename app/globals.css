@@ -343,6 +343,7 @@ label {
 input[type='text'],
 input[type='password'],
 input[type='date'],
+input[type='month'],
 input[type='time'],
 input[type='number'],
 select {
@@ -503,33 +504,68 @@ select:focus {
   flex-direction: column;
 }
 
-/* --- Zones deroulantes : listes et tableaux ont une hauteur maximale et
-   defilent a l'interieur, pour ne pas avoir a descendre tout en bas de la
-   page. L'en-tete des tableaux reste visible pendant le defilement. --- */
+/* --- Zones deroulantes : listes, tableaux et blocs multi-tableaux
+   (.scroll-zone) ont une hauteur maximale et defilent a l'interieur, avec
+   une barre de defilement laterale TOUJOURS visible (y compris sur Mac, ou
+   les barres "fines" natives sont masquees tant qu'on ne defile pas).
+   L'en-tete des tableaux reste visible pendant le defilement. --- */
 
 .list,
-.table-wrap {
-  max-height: min(560px, 70vh);
+.table-wrap,
+.scroll-zone {
+  max-height: min(520px, 65vh);
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--platinum) transparent;
 }
 
-.list {
-  padding-right: 8px;
+.list,
+.scroll-zone {
+  padding-right: 10px;
+}
+
+/* Dans un bloc deja deroulant, les tableaux internes ne defilent pas une
+   seconde fois (pas de double barre). */
+.scroll-zone .list,
+.scroll-zone .table-wrap {
+  max-height: none;
+  padding-right: 0;
 }
 
 .list::-webkit-scrollbar,
-.table-wrap::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.table-wrap::-webkit-scrollbar,
+.scroll-zone::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.list::-webkit-scrollbar-track,
+.table-wrap::-webkit-scrollbar-track,
+.scroll-zone::-webkit-scrollbar-track {
+  background: var(--platinum-soft);
+  border-radius: 5px;
 }
 
 .list::-webkit-scrollbar-thumb,
-.table-wrap::-webkit-scrollbar-thumb {
-  background: var(--platinum);
-  border-radius: 4px;
+.table-wrap::-webkit-scrollbar-thumb,
+.scroll-zone::-webkit-scrollbar-thumb {
+  background: #9aa7b8;
+  border-radius: 5px;
+  border: 2px solid var(--platinum-soft);
+}
+
+.list::-webkit-scrollbar-thumb:hover,
+.table-wrap::-webkit-scrollbar-thumb:hover,
+.scroll-zone::-webkit-scrollbar-thumb:hover {
+  background: var(--blue-500);
+}
+
+/* Firefox (ne connait pas ::-webkit-scrollbar). */
+@supports (-moz-appearance: none) {
+  .list,
+  .table-wrap,
+  .scroll-zone {
+    scrollbar-color: #9aa7b8 var(--platinum-soft);
+  }
 }
 
 .list-row {

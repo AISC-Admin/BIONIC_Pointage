@@ -2,23 +2,32 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { sql, ensureSchema } from '@/lib/db';
 import { requireAdminSession } from '@/lib/auth';
+import { ensureBaseSalariesSchema } from '@/lib/baseSalaries';
 
 export async function GET() {
   const session = await requireAdminSession();
   if (!session) return NextResponse.json({ erreur: 'Acces refuse.' }, { status: 403 });
   await ensureSchema();
+  await ensureBaseSalariesSchema();
 
   // date_entree/date_sortie sont castees en texte (to_char) plutot que
   // renvoyees comme DATE brute : selon le driver Postgres et le fuseau
   // horaire du serveur, une DATE peut etre reinterpretee comme un instant et
   // decalee d'un jour a la conversion JSON. En texte "YYYY-MM-DD", aucune
   // ambiguite.
+  // fiche_* : fiche "Base de donnees salaries" reliee (poste, photo
+  // principale, nombre de photos du book), si elle existe.
   const { rows } = await sql`
-    SELECT id, nom, prenom, taux_horaire, actif, created_at,
-           to_char(date_entree, 'YYYY-MM-DD') AS date_entree,
-           to_char(date_sortie, 'YYYY-MM-DD') AS date_sortie
-    FROM employees
-    ORDER BY nom, prenom;
+    SELECT e.id, e.nom, e.prenom, e.taux_horaire, e.actif, e.created_at,
+           to_char(e.date_entree, 'YYYY-MM-DD') AS date_entree,
+           to_char(e.date_sortie, 'YYYY-MM-DD') AS date_sortie,
+           f.id AS fiche_id, f.poste AS fiche_poste, f.photo_url AS fiche_photo_url,
+           (SELECT COUNT(*)::int FROM base_salaries_photos p WHERE p.fiche_id = f.id) AS nb_photos
+    FROM employees e
+    LEFT JOIN LATERAL (
+      SELECT id, poste, photo_url FROM base_salaries b WHERE b.employee_id = e.id ORDER BY b.id LIMIT 1
+    ) f ON true
+    ORDER BY e.nom, e.prenom;
   `;
   return NextResponse.json({ employees: rows });
 }

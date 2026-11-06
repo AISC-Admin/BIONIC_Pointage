@@ -9,7 +9,15 @@ export async function PATCH(request, { params }) {
   const { id } = await params;
   const { nom, actif } = await request.json();
 
-  if (nom !== undefined) await sql`UPDATE sites SET nom = ${nom.trim()} WHERE id = ${id};`;
+  if (nom !== undefined) {
+    const propre = String(nom).trim();
+    if (!propre) return NextResponse.json({ erreur: 'Le nom du site est obligatoire.' }, { status: 400 });
+    try {
+      await sql`UPDATE sites SET nom = ${propre} WHERE id = ${id};`;
+    } catch {
+      return NextResponse.json({ erreur: 'Un autre site porte deja ce nom.' }, { status: 409 });
+    }
+  }
   if (actif !== undefined) await sql`UPDATE sites SET actif = ${actif} WHERE id = ${id};`;
 
   const { rows } = await sql`SELECT id, nom, actif FROM sites WHERE id = ${id};`;
